@@ -45,12 +45,14 @@
   <title>三炮大战十五兵</title>
   <style>
     body {
-      background-color: #e5e7eb;
+      background: linear-gradient(to bottom, #e5e7eb, #F5F5DC);
       font-family: sans-serif;
+      min-height: 100vh;
     }
     canvas {
       border: 2px solid #4B5EAA;
       background-color: #F5F5DC;
+      box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     }
     .游戏容器 {
       display: flex;
@@ -69,8 +71,14 @@
     #游戏状态 {
       margin-top: 24px;
       font-size: 20px;
-      color: #1f2937;
       font-weight: 600;
+    }
+    .回合-白棋 {
+      color: #FFFFFF;
+      text-shadow: 0 0 2px #000000;
+    }
+    .回合-黑棋 {
+      color: #1a1a1a;
     }
     .按钮组 {
       margin-top: 16px;
@@ -85,19 +93,27 @@
       box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
       border: none;
       cursor: pointer;
-      transition: background-color 0.3s;
+      transition: transform 0.2s, background-color 0.3s;
     }
     button:hover {
       background-color: #4338ca;
+      transform: scale(1.05);
     }
     button:disabled {
       background-color: #9ca3af;
       cursor: not-allowed;
+      transform: none;
     }
     @media (max-width: 600px) {
       canvas {
         width: 300px;
         height: 300px;
+      }
+    }
+    @media (min-width: 600px) and (max-width: 800px) {
+      canvas {
+        width: 400px;
+        height: 400px;
       }
     }
   </style>
@@ -108,7 +124,7 @@
     <canvas id="游戏画布" width="500" height="500"></canvas>
     <div id="游戏状态"></div>
     <div class="按钮组">
-      <button id="执蓝棋按钮">执蓝棋</button>
+      <button id="执白棋按钮">执白棋</button>
       <button id="执黑棋按钮">执黑棋</button>
       <button id="重置按钮">重新开始</button>
     </div>
@@ -118,32 +134,32 @@
     const 上下文 = 画布.getContext('2d');
     const 状态 = document.getElementById('游戏状态');
     const 重置按钮 = document.getElementById('重置按钮');
-    const 执蓝棋按钮 = document.getElementById('执蓝棋按钮');
+    const 执白棋按钮 = document.getElementById('执白棋按钮');
     const 执黑棋按钮 = document.getElementById('执黑棋按钮');
 
     const 网格大小 = 5;
     let 格子大小 = 画布.width / 网格大小;
     const 黑棋 = '#1a1a1a';
-    const 蓝棋 = '#87CEEB';
+    const 白棋 = '#FFFFFF';
 
     // 音效
     const 音效环境 = new (window.AudioContext || window.webkitAudioContext)();
-    function 播放吃子音效() {
+    function 播放音效(频率, 持续时间) {
       const 振荡器 = 音效环境.createOscillator();
       const 增益节点 = 音效环境.createGain();
       振荡器.connect(增益节点);
       增益节点.connect(音效环境.destination);
       振荡器.type = 'sine';
-      振荡器.frequency.setValueAtTime(440, 音效环境.currentTime);
+      振荡器.frequency.setValueAtTime(频率, 音效环境.currentTime);
       增益节点.gain.setValueAtTime(0.5, 音效环境.currentTime);
       振荡器.start();
-      振荡器.stop(音效环境.currentTime + 0.1);
+      振荡器.stop(音效环境.currentTime + 持续时间);
     }
 
     class 棋盘 {
       constructor() {
         this.网格 = Array(网格大小 * 网格大小).fill(null);
-        this.回合 = 蓝棋;
+        this.回合 = 白棋;
         this.选中棋子 = null;
         this.吃掉黑棋数 = 0;
         this.最后移动 = null;
@@ -155,10 +171,10 @@
           this.网格[i] = 黑棋;
         }
         for (let i = 21; i <= 23; i++) {
-          this.网格[i] = 蓝棋;
+          this.网格[i] = 白棋;
         }
         this.吃掉黑棋数 = 0;
-        this.回合 = 蓝棋;
+        this.回合 = 白棋;
         this.选中棋子 = null;
         this.最后移动 = null;
       }
@@ -183,8 +199,8 @@
           }
         }
 
-        // 蓝棋吃子
-        if (this.网格[pos] === 蓝棋) {
+        // 白棋吃子
+        if (this.网格[pos] === 白棋) {
           for (const { 行变化, 列变化 } of 方向) {
             const 中间行 = 行 + 行变化;
             const 中间列 = 列 + 列变化;
@@ -210,36 +226,36 @@
 
       移动棋子(从, 到) {
         if (!this.网格[从] || (this.网格[到] && this.网格[到] !== 黑棋)) {
-          return null; // 无效移动
+          return null;
         }
         const 棋子 = this.网格[从];
         this.网格[从] = null;
         const 是否吃子 = this.网格[到] === 黑棋;
         this.网格[到] = 棋子;
 
-        if (棋子 === 蓝棋 && 是否吃子) {
+        if (棋子 === 白棋 && 是否吃子) {
           this.吃掉黑棋数++;
         }
 
-        this.回合 = this.回合 === 黑棋 ? 蓝棋 : 黑棋;
+        this.回合 = this.回合 === 黑棋 ? 白棋 : 黑棋;
         this.最后移动 = { 从, 到 };
         return { 从, 到, 是否吃子 };
       }
 
       检查胜负() {
         if (this.吃掉黑棋数 >= 12) {
-          return '蓝棋获胜！吃掉12个或更多黑棋';
+          return '白棋获胜！吃掉12个或更多黑棋';
         }
-        if (this.回合 === 蓝棋) {
+        if (this.回合 === 白棋) {
           let 有移动 = false;
           for (let i = 0; i < this.网格.length; i++) {
-            if (this.网格[i] === 蓝棋 && this.获取合法移动(i).length > 0) {
+            if (this.网格[i] === 白棋 && this.获取合法移动(i).length > 0) {
               有移动 = true;
               break;
             }
           }
           if (!有移动) {
-            return '黑棋获胜！所有蓝棋被困';
+            return '黑棋获胜！所有白棋被困';
           }
         }
         return null;
@@ -264,56 +280,55 @@
         if (this.棋盘.吃掉黑棋数 >= 12) {
           return 10000;
         }
-        let 蓝棋移动数 = 0;
-        let 蓝棋边缘得分 = 0;
-        let 蓝棋位置 = [];
-        let 黑棋靠近蓝棋得分 = 0;
+        let 白棋移动数 = 0;
+        let 白棋边缘得分 = 0;
+        let 白棋位置 = [];
+        let 黑棋靠近白棋得分 = 0;
         for (let i = 0; i < this.棋盘.网格.length; i++) {
-          if (this.棋盘.网格[i] === 蓝棋) {
-            蓝棋移动数 += this.棋盘.获取合法移动(i).length;
+          if (this.棋盘.网格[i] === 白棋) {
+            白棋移动数 += this.棋盘.获取合法移动(i).length;
             const 行 = Math.floor(i / 网格大小);
             const 列 = i % 网格大小;
-            蓝棋位置.push({ 行, 列 });
+            白棋位置.push({ 行, 列 });
             const 边缘距离 = Math.min(行, 网格大小 - 1 - 行, 列, 网格大小 - 1 - 列);
-            蓝棋边缘得分 += 边缘距离 === 0 ? 10 : 边缘距离 === 1 ? 5 : 0;
+            白棋边缘得分 += 边缘距离 === 0 ? 10 : 边缘距离 === 1 ? 5 : 0;
           }
         }
-        if (蓝棋移动数 === 0 && this.棋盘.回合 === 蓝棋) {
+        if (白棋移动数 === 0 && this.棋盘.回合 === 白棋) {
           return -10000;
         }
 
-        // 黑棋靠近蓝棋
         if (this.棋盘.回合 === 黑棋) {
           for (let i = 0; i < this.棋盘.网格.length; i++) {
             if (this.棋盘.网格[i] === 黑棋) {
               const 行 = Math.floor(i / 网格大小);
               const 列 = i % 网格大小;
               let 最小距离 = Infinity;
-              for (const { 行: 蓝行, 列: 蓝列 } of 蓝棋位置) {
-                const 距离 = Math.abs(行 - 蓝行) + Math.abs(列 - 蓝列);
+              for (const { 行: 白行, 列: 白列 } of 白棋位置) {
+                const 距离 = Math.abs(行 - 白行) + Math.abs(列 - 白列);
                 最小距离 = Math.min(最小距离, 距离);
               }
-              黑棋靠近蓝棋得分 += 最小距离 <= 2 ? 5 : 0;
+              黑棋靠近白棋得分 += 最小距离 <= 2 ? 5 : 0;
             }
           }
         }
 
-        let 蓝棋集中度 = 0;
-        if (蓝棋位置.length > 1) {
+        let 白棋集中度 = 0;
+        if (白棋位置.length > 1) {
           let 总距离 = 0;
           let 计数 = 0;
-          for (let i = 0; i < 蓝棋位置.length; i++) {
-            for (let j = i + 1; j < 蓝棋位置.length; j++) {
-              总距离 += Math.abs(蓝棋位置[i].行 - 蓝棋位置[j].行) + Math.abs(蓝棋位置[i].列 - 蓝棋位置[j].列);
+          for (let i = 0; i < 白棋位置.length; i++) {
+            for (let j = i + 1; j < 白棋位置.length; j++) {
+              总距离 += Math.abs(白棋位置[i].行 - 白棋位置[j].行) + Math.abs(白棋位置[i].列 - 白棋位置[j].列);
               计数++;
             }
           }
-          蓝棋集中度 = 总距离 / 计数;
+          白棋集中度 = 总距离 / 计数;
         }
 
-        return this.棋盘.回合 === 蓝棋
-          ? this.棋盘.吃掉黑棋数 * 20 - 蓝棋集中度 * 5
-          : -蓝棋移动数 * 10 + 蓝棋边缘得分 * 15 + 黑棋靠近蓝棋得分 * 5;
+        return this.棋盘.回合 === 白棋
+          ? this.棋盘.吃掉黑棋数 * 20 - 白棋集中度 * 5
+          : -白棋移动数 * 10 + 白棋边缘得分 * 15 + 黑棋靠近白棋得分 * 5;
       }
 
       minimax(深度, alpha, beta, 是否最大化) {
@@ -330,11 +345,11 @@
             for (const 到 of 移动) {
               const 新棋盘 = this.棋盘.复制();
               const 结果 = 新棋盘.移动棋子(i, 到);
-              if (!结果) continue; // 跳过无效移动
-              const 旧棋盘 = this.棋盘; // 保存当前棋盘
-              this.棋盘 = 新棋盘; // 切换到新棋盘
+              if (!结果) continue;
+              const 旧棋盘 = this.棋盘;
+              this.棋盘 = 新棋盘;
               const 分数 = this.minimax(深度 - 1, alpha, beta, !是否最大化);
-              this.棋盘 = 旧棋盘; // 恢复棋盘
+              this.棋盘 = 旧棋盘;
               if (是否最大化) {
                 if (分数 > 最佳得分) {
                   最佳得分 = 分数;
@@ -366,7 +381,7 @@
       }
 
       获取最佳移动() {
-        return this.minimax(4, -Infinity, Infinity, this.棋盘.回合 === 蓝棋);
+        return this.minimax(4, -Infinity, Infinity, this.棋盘.回合 === 白棋);
       }
     }
 
@@ -392,7 +407,7 @@
 
         // 绘制格子编号（1-25）
         上下文.fillStyle = '#666666';
-        上下文.font = `${格子大小 / 7}px Arial`;
+        上下文.font = `${格子大小 / 6}px Georgia`;
         上下文.textAlign = 'right';
         上下文.textBaseline = 'bottom';
         for (let i = 0; i < 网格大小 * 网格大小; i++) {
@@ -402,6 +417,10 @@
         }
 
         // 绘制棋子
+        上下文.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        上下文.shadowBlur = 5;
+        上下文.shadowOffsetX = 2;
+        上下文.shadowOffsetY = 2;
         for (let i = 0; i < 棋盘.网格.length; i++) {
           if (棋盘.网格[i]) {
             const 行 = Math.floor(i / 网格大小);
@@ -417,10 +436,11 @@
             );
             上下文.fill();
             上下文.strokeStyle = '#000000';
-            上下文.lineWidth = 1;
+            上下文.lineWidth = 棋盘.网格[i] === 白棋 ? 2 : 1;
             上下文.stroke();
           }
         }
+        上下文.shadowColor = 'transparent';
 
         // 高亮选中棋子
         if (棋盘.选中棋子 !== null) {
@@ -439,9 +459,8 @@
           上下文.stroke();
 
           // 高亮合法移动
-          const 移动 = 棋盘.获取合法移动(棋盘.选中棋子);
           上下文.fillStyle = 'rgba(50, 205, 50, 0.4)';
-          for (const 移动位置 of 移动) {
+          for (const 移动位置 of 棋盘.获取合法移动(棋盘.选中棋子)) {
             const 移动行 = Math.floor(移动位置 / 网格大小);
             const 移动列 = 移动位置 % 网格大小;
             上下文.fillRect(移动列 * 格子大小, 移动行 * 格子大小, 格子大小, 格子大小);
@@ -465,18 +484,12 @@
       }
 
       动画移动(棋盘, 从, 到, 是否吃子, 回调) {
-        if (!是否吃子) {
-          this.绘制棋盘(棋盘);
-          回调();
-          return;
-        }
-
         const 从行 = Math.floor(从 / 网格大小);
         const 从列 = 从 % 网格大小;
         const 到行 = Math.floor(到 / 网格大小);
         const 到列 = 到 % 网格大小;
         let t = 0;
-        const 持续时间 = 500;
+        const 持续时间 = 是否吃子 ? 500 : 300;
         const 开始X = 从列 * 格子大小 + 格子大小 / 2;
         const 开始Y = 从行 * 格子大小 + 格子大小 / 2;
         const 结束X = 到列 * 格子大小 + 格子大小 / 2;
@@ -486,21 +499,27 @@
           t += 16 / 持续时间;
           if (t >= 1) {
             this.绘制棋盘(棋盘);
-            播放吃子音效();
+            播放音效(是否吃子 ? 440 : 300, 是否吃子 ? 0.1 : 0.05);
             回调();
             return;
           }
 
           this.绘制棋盘(棋盘);
-          上下文.fillStyle = 棋盘.网格[到];
+          上下文.fillStyle = 棋盘.网格[到] || 棋盘.网格[从];
+          上下文.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          上下文.shadowBlur = 5;
+          上下文.shadowOffsetX = 2;
+          上下文.shadowOffsetY = 2;
           上下文.beginPath();
           const x = 开始X + (结束X - 开始X) * t;
           const y = 开始Y + (结束Y - 开始Y) * t;
-          上下文.arc(x, y, 格子大小 / 3, 0, 2 * Math.PI);
+          const 缩放 = 是否吃子 ? (t < 0.5 ? 1 + 0.2 * t * 2 : 1.2 - 0.2 * (t - 0.5) * 2) : 1;
+          上下文.arc(x, y, (格子大小 / 3) * 缩放, 0, 2 * Math.PI);
           上下文.fill();
           上下文.strokeStyle = '#000000';
-          上下文.lineWidth = 1;
+          上下文.lineWidth = 棋盘.网格[到] === 白棋 ? 2 : 1;
           上下文.stroke();
+          上下文.shadowColor = 'transparent';
 
           requestAnimationFrame(动画);
         };
@@ -523,15 +542,17 @@
 
       更新状态() {
         if (this.玩家棋方 === null) {
-          状态.textContent = '请选择执蓝棋或执黑棋';
+          状态.textContent = '请选择执白棋或执黑棋';
+          状态.className = '';
         } else {
-          状态.textContent = `您执${this.玩家棋方 === 蓝棋 ? '蓝棋' : '黑棋'} | 轮到：${this.棋盘.回合 === 蓝棋 ? '蓝棋' : '黑棋'} | 吃掉黑棋数：${this.棋盘.吃掉黑棋数}`;
+          状态.textContent = `您执${this.玩家棋方 === 白棋 ? '白棋' : '黑棋'} | 轮到：${this.棋盘.回合 === 白棋 ? '白棋' : '黑棋'} | 吃掉黑棋数：${this.棋盘.吃掉黑棋数}`;
+          状态.className = `回合-${this.棋盘.回合 === 白棋 ? '白棋' : '黑棋'}`;
         }
       }
 
       选择棋方(棋方) {
         this.玩家棋方 = 棋方;
-        执蓝棋按钮.disabled = true;
+        执白棋按钮.disabled = true;
         执黑棋按钮.disabled = true;
         this.AI移动中 = false;
         this.棋盘.初始化();
@@ -560,6 +581,7 @@
                   const 结果 = this.棋盘.检查胜负();
                   if (结果) {
                     状态.textContent = 结果;
+                    状态.className = '';
                     画布.removeEventListener('click', this.点击处理器);
                   } else {
                     this.更新状态();
@@ -607,6 +629,7 @@
                 const 结果 = this.棋盘.检查胜负();
                 if (结果) {
                   状态.textContent = 结果;
+                  状态.className = '';
                   画布.removeEventListener('click', this.点击处理器);
                 } else {
                   this.更新状态();
@@ -630,7 +653,7 @@
       重置() {
         this.玩家棋方 = null;
         this.AI移动中 = false;
-        执蓝棋按钮.disabled = false;
+        执白棋按钮.disabled = false;
         执黑棋按钮.disabled = false;
         this.棋盘.初始化();
         this.AI = new AI(this.棋盘);
@@ -649,7 +672,7 @@
     };
     画布.addEventListener('click', 游戏实例.点击处理器);
     重置按钮.addEventListener('click', () => 游戏实例.重置());
-    执蓝棋按钮.addEventListener('click', () => 游戏实例.选择棋方(蓝棋));
+    执白棋按钮.addEventListener('click', () => 游戏实例.选择棋方(白棋));
     执黑棋按钮.addEventListener('click', () => 游戏实例.选择棋方(黑棋));
 
     // 响应式画布尺寸
@@ -657,6 +680,9 @@
       if (window.innerWidth < 600) {
         画布.width = 300;
         画布.height = 300;
+      } else if (window.innerWidth < 800) {
+        画布.width = 400;
+        画布.height = 400;
       } else {
         画布.width = 500;
         画布.height = 500;
