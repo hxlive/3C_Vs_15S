@@ -42,7 +42,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>三炮大战十五兵</title>
+  <title>三炮大战十五兵-hxlive版</title>
   <style>
     body {
       background: linear-gradient(to bottom, #e5e7eb, #F5F5DC);
@@ -72,6 +72,7 @@
       margin-top: 24px;
       font-size: 20px;
       font-weight: 600;
+      color: #60A5FA;
     }
     .回合-白棋 {
       color: #FFFFFF;
@@ -79,6 +80,9 @@
     }
     .回合-黑棋 {
       color: #1a1a1a;
+    }
+    .胜负提示 {
+      font-weight: 700;
     }
     .按钮组 {
       margin-top: 16px;
@@ -139,8 +143,8 @@
 
     const 网格大小 = 5;
     let 格子大小 = 画布.width / 网格大小;
-    const 黑棋 = '#1a1a1a';
-    const 白棋 = '#FFFFFF';
+    const 黑棋 = '#333333'; // 柔和深灰黑
+    const 白棋 = '#F5F5F5'; // 柔和白
 
     // 音效
     const 音效环境 = new (window.AudioContext || window.webkitAudioContext)();
@@ -418,25 +422,32 @@
 
         // 绘制棋子
         上下文.shadowColor = 'rgba(0, 0, 0, 0.3)';
-        上下文.shadowBlur = 5;
-        上下文.shadowOffsetX = 2;
-        上下文.shadowOffsetY = 2;
+        上下文.shadowBlur = 8;
+        上下文.shadowOffsetX = 3;
+        上下文.shadowOffsetY = 3;
         for (let i = 0; i < 棋盘.网格.length; i++) {
           if (棋盘.网格[i]) {
             const 行 = Math.floor(i / 网格大小);
             const 列 = i % 网格大小;
-            上下文.fillStyle = 棋盘.网格[i];
-            上下文.beginPath();
-            上下文.arc(
-              列 * 格子大小 + 格子大小 / 2,
-              行 * 格子大小 + 格子大小 / 2,
-              格子大小 / 3,
-              0,
-              2 * Math.PI
+            const x = 列 * 格子大小 + 格子大小 / 2;
+            const y = 行 * 格子大小 + 格子大小 / 2;
+            const 渐变 = 上下文.createRadialGradient(
+              x - 格子大小 / 6, y - 格子大小 / 6, 格子大小 / 10,
+              x, y, 格子大小 / 3
             );
+            if (棋盘.网格[i] === 白棋) {
+              渐变.addColorStop(0, '#F5F5F5'); // 柔和白
+              渐变.addColorStop(1, '#E5E7EB'); // 浅灰白
+            } else {
+              渐变.addColorStop(0, '#333333'); // 深灰黑
+              渐变.addColorStop(1, '#1F1F1F'); // 更深灰黑
+            }
+            上下文.fillStyle = 渐变;
+            上下文.beginPath();
+            上下文.arc(x, y, 格子大小 / 3, 0, 2 * Math.PI);
             上下文.fill();
-            上下文.strokeStyle = '#000000';
-            上下文.lineWidth = 棋盘.网格[i] === 白棋 ? 2 : 1;
+            上下文.strokeStyle = 棋盘.网格[i] === 白棋 ? '#000000' : '#D4D4D4'; // 黑棋描边柔和灰白
+            上下文.lineWidth = 2;
             上下文.stroke();
           }
         }
@@ -505,19 +516,33 @@
           }
 
           this.绘制棋盘(棋盘);
-          上下文.fillStyle = 棋盘.网格[到] || 棋盘.网格[从];
-          上下文.shadowColor = 'rgba(0, 0, 0, 0.3)';
-          上下文.shadowBlur = 5;
-          上下文.shadowOffsetX = 2;
-          上下文.shadowOffsetY = 2;
-          上下文.beginPath();
           const x = 开始X + (结束X - 开始X) * t;
           const y = 开始Y + (结束Y - 开始Y) * t;
-          const 缩放 = 是否吃子 ? (t < 0.5 ? 1 + 0.2 * t * 2 : 1.2 - 0.2 * (t - 0.5) * 2) : 1;
+          const 缩放 = 是否吃子
+            ? (t < 0.5 ? 1 + 0.2 * t * 2 : 1.2 - 0.2 * (t - 0.5) * 2)
+            : (t < 0.5 ? 1 + 0.1 * t * 2 : 1.1 - 0.1 * (t - 0.5) * 2);
+          const 渐变 = 上下文.createRadialGradient(
+            x - 格子大小 / 6, y - 格子大小 / 6, 格子大小 / 10,
+            x, y, (格子大小 / 3) * 缩放
+          );
+          const 棋子颜色 = 棋盘.网格[到] || 棋盘.网格[从];
+          if (棋子颜色 === 白棋) {
+            渐变.addColorStop(0, '#F5F5F5');
+            渐变.addColorStop(1, '#E5E7EB');
+          } else {
+            渐变.addColorStop(0, '#333333');
+            渐变.addColorStop(1, '#1F1F1F');
+          }
+          上下文.fillStyle = 渐变;
+          上下文.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          上下文.shadowBlur = 8;
+          上下文.shadowOffsetX = 3;
+          上下文.shadowOffsetY = 3;
+          上下文.beginPath();
           上下文.arc(x, y, (格子大小 / 3) * 缩放, 0, 2 * Math.PI);
           上下文.fill();
-          上下文.strokeStyle = '#000000';
-          上下文.lineWidth = 棋盘.网格[到] === 白棋 ? 2 : 1;
+          上下文.strokeStyle = 棋子颜色 === 白棋 ? '#000000' : '#D4D4D4';
+          上下文.lineWidth = 2;
           上下文.stroke();
           上下文.shadowColor = 'transparent';
 
@@ -545,8 +570,14 @@
           状态.textContent = '请选择执白棋或执黑棋';
           状态.className = '';
         } else {
-          状态.textContent = `您执${this.玩家棋方 === 白棋 ? '白棋' : '黑棋'} | 轮到：${this.棋盘.回合 === 白棋 ? '白棋' : '黑棋'} | 吃掉黑棋数：${this.棋盘.吃掉黑棋数}`;
-          状态.className = `回合-${this.棋盘.回合 === 白棋 ? '白棋' : '黑棋'}`;
+          const 结果 = this.棋盘.检查胜负();
+          if (结果) {
+            状态.textContent = 结果;
+            状态.className = '胜负提示';
+          } else {
+            状态.textContent = `您执${this.玩家棋方 === 白棋 ? '白棋' : '黑棋'} | 轮到：${this.棋盘.回合 === 白棋 ? '白棋' : '黑棋'} | 吃掉黑棋数：${this.棋盘.吃掉黑棋数}`;
+            状态.className = `回合-${this.棋盘.回合 === 白棋 ? '白棋' : '黑棋'}`;
+          }
         }
       }
 
@@ -581,7 +612,7 @@
                   const 结果 = this.棋盘.检查胜负();
                   if (结果) {
                     状态.textContent = 结果;
-                    状态.className = '';
+                    状态.className = '胜负提示';
                     画布.removeEventListener('click', this.点击处理器);
                   } else {
                     this.更新状态();
@@ -629,7 +660,7 @@
                 const 结果 = this.棋盘.检查胜负();
                 if (结果) {
                   状态.textContent = 结果;
-                  状态.className = '';
+                  状态.className = '胜负提示';
                   画布.removeEventListener('click', this.点击处理器);
                 } else {
                   this.更新状态();
